@@ -2,6 +2,8 @@ const express = require("express");
 
 const router = new express.Router();
 const db = require("../db");
+const ExpressError = require("../expressError");
+const slugify = require("slugify");
 
 
 router.get("/",
@@ -28,8 +30,24 @@ router.get("/:code",
       `SELECT code, name, description
        FROM companies
        WHERE code=$1`, [code]);
-
-    return res.json(results.rows);
+    const their_invoices = await db.query(
+        `SELECT id, amt, paid, add_date, paid_date
+        FROM invoices
+        WHERE comp_code = $1`, [code]
+    );
+    const their_industries = await db.query(
+        `SELECT industries.name FROM industries JOIN markets
+        ON industries.code = industry_code JOIN companies
+        ON company_code = companies.code
+        WHERE companies.code= $1`, [code]
+    );
+    if(results.rows.length === 0){
+        throw new ExpressError("A company does not have that code", 404);
+    }
+    const company = results.rows[0];
+    company.invoices = their_invoices.rows; 
+    company.industries = their_industries.rows;
+    return res.json(company);
   }
 
   catch (err) {
@@ -39,14 +57,16 @@ router.get("/:code",
 
 router.post("/", async function (req, res, next) {
   try {
-    const { name, code, description } = req.body;
+    let { name, description } = req.body;
+    let code = slugify(name, {lower: true});
+
 
     const result = await db.query(
       `INSERT INTO companies (code, name, description) 
       VALUES ($1, $2, $3) 
       RETURNING code, name`, [code, name, description]);
 
-    return res.json(result.rows);
+    return res.status(201).json({"company": result.rows[0]});
   }
 
   catch (err) {

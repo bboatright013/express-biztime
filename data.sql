@@ -1,5 +1,5 @@
 
-\c biztime_test;
+\c biztime;
 
 DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS companies;
@@ -20,6 +20,16 @@ CREATE TABLE invoices (
     CONSTRAINT invoices_amt_check CHECK ((amt > (0)::double precision))
 );
 
+CREATE TABLE industries (
+  code text PRIMARY KEY,
+  name text NOT NULL UNIQUE
+);
+
+CREATE TABLE markets (
+  industry_code text REFERENCES industries,
+  company_code text REFERENCES companies
+);
+
 INSERT INTO companies
   VALUES ('apple', 'Apple Computer', 'Maker of OSX.'),
          ('ibm', 'IBM', 'Big blue.');
@@ -29,3 +39,13 @@ INSERT INTO invoices (comp_Code, amt, paid, paid_date)
          ('apple', 200, false, null),
          ('apple', 300, true, '2018-01-01'),
          ('ibm', 400, false, null);
+
+INSERT INTO industries
+ VALUES ('tech', 'Technology'),
+        ('text', 'Textiles and Clothing'),
+        ('land', 'Property Development'),
+        ('auto', 'Automotive and Transportation');
+
+INSERT INTO markets
+  VALUES ('tech', 'apple'),
+          ('tech', 'ibm');
